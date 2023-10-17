@@ -11,16 +11,13 @@ class TestSource(unittest.TestCase):
         self.loop = asyncio.get_event_loop()
 
     def test_initialize(self):
-
         source = TransactionsSource(
             "wss://dex.binance.org/api/ws",
             "https://bsc-dataseed.binance.org",
             contract_deployment)
-
         self.assertTrue(source is not None)
 
     def test_single_process(self):
-
         source = TransactionsSource(
             "wss://dex.binance.org/api/ws",
             "https://bsc-dataseed.binance.org",
@@ -31,6 +28,23 @@ class TestSource(unittest.TestCase):
             self.assertTrue(data == {})
 
         self.loop.run_until_complete(process())
+
+    def test_delayed_process(self):
+        source = TransactionsSource(
+            "wss://dex.binance.org/api/ws",
+            "https://bsc-dataseed.binance.org",
+            contract_deployment)
+
+        async def process():
+            data = source.process([])
+            self.assertTrue(data == {})
+
+        async def delayed_process():
+            for _ in range(30):
+                await asyncio.sleep(1)
+                await process()
+
+        self.loop.run_until_complete(delayed_process())
 
 
 if __name__ == '__main__':
