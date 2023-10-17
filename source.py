@@ -10,17 +10,17 @@ class TransactionsSource:
         self.ws_url = ws_url
         self.web3 = Web3(Web3.HTTPProvider(rpc))
         self.filter = transaction_filter
-        self.time_series = {}
+        self.data = {}
         self.process_task = None
 
     def process(self):
         if self.process_task is None:
-            self.process_task = asyncio.create_task(self.run_processing())
+            self.process_task = asyncio.create_task(self.__process())
 
         else:
-            return [self.time_series]
+            return [self.data]
 
-    async def run_processing(self):
+    async def __process(self):
         async with connect(self.ws_url) as ws:
             await ws.send(
                 '{"jsonrpc": "2.0", "id": 1, "method": "eth_subscribe", "params": ["newPendingTransactions"]}')
@@ -28,25 +28,21 @@ class TransactionsSource:
             print(subscription_response)
 
             while True:
-                try:
-                    message = await asyncio.wait_for(ws.recv(), timeout=15)
-                    response = json.loads(message)
-                    if 'result' in response['params']:
-                        tx_hash = response['params']['result']
+                message = await asyncio.wait_for(ws.recv(), timeout=15)
+                response = json.loads(message)
+                if 'result' in response['params']:
+                    tx_hash = response['params']['result']
 
-                        tx_info = self.web3.eth.get_transaction(tx_hash)
-                        if tx_info is not None:
-                            if self.filter(tx_info):
-                                to_address = tx_info['to']
-                                current_time = int(time.time())
+                    tx_info = self.web3.eth.get_transaction(tx_hash)
+                    if tx_info is not None:
+                        if self.filter(tx_info):
+                            to_address = tx_info['to']
+                            current_time = int(time.time())
 
-                                if to_address not in self.time_series:
-                                    self.time_series[to_address] = []
+                            if to_address not in self.data:
+                                self.data[to_address] = []
 
-                                self.time_series[to_address].append({
-                                    "time": current_time,
-                                    "value": tx_info
-                                })
-
-                except Exception as ex:
-                    print(ex)
+                            self.data[to_address].append({
+                                "time": current_time,
+                                "value": tx_info
+                            })
