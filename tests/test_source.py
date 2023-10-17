@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 
 from filters import contract_deployment
@@ -5,6 +6,9 @@ from source import TransactionsSource
 
 
 class TestSource(unittest.TestCase):
+
+    def setUp(self):
+        self.loop = asyncio.get_event_loop()
 
     def test_initialize(self):
         source = TransactionsSource(
@@ -20,8 +24,11 @@ class TestSource(unittest.TestCase):
             "https://bsc-dataseed.binance.org",
             contract_deployment)
 
-        data = source.process()
-        print(data)
+        async def process():
+            data = source.process()
+            print(data)
+
+        self.loop.run_until_complete(process())
 
 
 if __name__ == '__main__':
