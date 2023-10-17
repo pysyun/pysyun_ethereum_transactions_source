@@ -2,27 +2,30 @@ from web3 import Web3
 from websockets import connect
 import json
 import asyncio
-import requests
 import time
 
 
 class TransactionsSource:
-    def __init__(self, ws_url, rpc, transaction_filter, database_url):
+    def __init__(self, ws_url, rpc, transaction_filter):
         self.ws_url = ws_url
         self.web3 = Web3(Web3.HTTPProvider(rpc))
         self.filter = transaction_filter
-        self.database_url = database_url
+        self.time_series = {}
+        self.process_task = None
 
-    async def process(self):
+    def process(self):
+        if self.process_task is None:
+            self.process_task = asyncio.create_task(self.run_processing())
+
+        else:
+            return [self.time_series]
+
+    async def run_processing(self):
         async with connect(self.ws_url) as ws:
             await ws.send(
                 '{"jsonrpc": "2.0", "id": 1, "method": "eth_subscribe", "params": ["newPendingTransactions"]}')
             subscription_response = await ws.recv()
             print(subscription_response)
-
-            requests.post(self.database_url, json={
-                "schema": "Ethereum Transactions Source"
-            })
 
             while True:
                 try:
@@ -34,21 +37,16 @@ class TransactionsSource:
                         tx_info = self.web3.eth.get_transaction(tx_hash)
                         if tx_info is not None:
                             if self.filter(tx_info):
-                                requests.post(self.database_url, json={
-                                    "schema": "Ethereum Transactions Source",
-                                    "timeLine": tx_info['to']
+                                to_address = tx_info['to']
+                                current_time = int(time.time())
+
+                                if to_address not in self.time_series:
+                                    self.time_series[to_address] = []
+
+                                self.time_series[to_address].append({
+                                    "time": current_time,
+                                    "value": tx_info
                                 })
 
-                                database_response = requests.put(self.database_url, json={
-                                    "time": int(time.time()),
-                                    "value": str(tx_info)
-                                }, params={
-                                    'format': 'string',
-                                    "schema": "Ethereum Transactions Source",
-                                    "timeLine": tx_info['to']
-                                })
-
-                                if database_response.text != '1':
-                                    print(f"Storage.Timeline error: {database_response.text}")
                 except Exception as ex:
                     print(ex)
