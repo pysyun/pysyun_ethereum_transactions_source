@@ -5,7 +5,6 @@ import asyncio
 import time
 
 
-# TODO: How to stop a task?
 class TransactionsSource:
 
     def __init__(self, ws_url, rpc, transaction_filter):
@@ -23,26 +22,33 @@ class TransactionsSource:
 
         return self.data
 
+    def stop(self):
+        if self.task is not None:
+            self.task.cancel()
+            self.task = None
+
     async def __process(self):
 
         async with connect(self.ws_url) as ws:
 
-            await ws.send(
-                '{"jsonrpc": "2.0", "id": 1, "method": "eth_subscribe", "params": ["newPendingTransactions"]}')
-            subscription_response = await ws.recv()
-            print(subscription_response)
+            subscription = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "eth_subscribe",
+                "params": ["newPendingTransactions"]
+            }
+            await ws.send(json.dumps(subscription))
 
             while True:
+                try:
+                    message = await asyncio.wait_for(ws.recv(), timeout=15)
+                    response = json.loads(message)
 
-                message = await asyncio.wait_for(ws.recv(), timeout=15)
-                response = json.loads(message)
-                if 'result' in response['params']:
+                    if 'result' in response['params']:
+                        tx_hash = response['params']['result']
+                        transaction = self.web3.eth.get_transaction(tx_hash)
 
-                    tx_hash = response['params']['result']
-
-                    transaction = self.web3.eth.get_transaction(tx_hash)
-                    if transaction is not None:
-                        if self.filter(transaction):
+                        if transaction is not None and self.filter(transaction):
                             to_address = transaction['to']
                             current_time = int(time.time())
 
@@ -53,3 +59,9 @@ class TransactionsSource:
                                 "time": current_time,
                                 "value": transaction
                             })
+                except asyncio.TimeoutError:
+                    pass
+                except asyncio.CancelledError:
+                    break
+                except Exception as e:
+                    print(f"Error: {e}")
