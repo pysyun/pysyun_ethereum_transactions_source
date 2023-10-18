@@ -44,7 +44,7 @@ class TransactionsSource:
                     message = await asyncio.wait_for(ws.recv(), timeout=15)
                     response = json.loads(message)
 
-                    if 'result' in response['params']:
+                    if 'params' in response and 'result' in response['params']:
                         tx_hash = response['params']['result']
                         transaction = self.web3.eth.get_transaction(tx_hash)
 

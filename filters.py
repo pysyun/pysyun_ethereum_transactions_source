@@ -1,6 +1,10 @@
-def contract_deployment(tx):
-    return tx.get('to') is None
+def contract_deployment(transaction):
+    return transaction.get('to') is None
 
 
-def payable_call(tx):
-    return tx.get('to') is not None and tx.get('value') > 0
+def payable_call(transaction):
+    return transaction.get('to') is not None and transaction.get('value') > 0
+
+
+def each(transaction):
+    return True

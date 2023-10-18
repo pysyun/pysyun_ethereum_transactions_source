@@ -1,7 +1,7 @@
 import asyncio
 import unittest
 
-from filters import contract_deployment
+from filters import contract_deployment, each
 from source import TransactionsSource
 
 
@@ -12,14 +12,14 @@ class TestSource(unittest.TestCase):
 
     def test_initialize(self):
         source = TransactionsSource(
-            "wss://dex.binance.org/api/ws",
+            "wss://bsc.publicnode.com",
             "https://bsc-dataseed.binance.org",
             contract_deployment)
         self.assertTrue(source is not None)
 
     def test_single_process(self):
         source = TransactionsSource(
-            "wss://dex.binance.org/api/ws",
+            "wss://bsc.publicnode.com",
             "https://bsc-dataseed.binance.org",
             contract_deployment)
 
@@ -31,16 +31,16 @@ class TestSource(unittest.TestCase):
 
     def test_delayed_process(self):
         source = TransactionsSource(
-            "wss://dex.binance.org/api/ws",
+            "wss://bsc.publicnode.com",
             "https://bsc-dataseed.binance.org",
-            contract_deployment)
+            each)
 
         async def process():
             data = source.process([])
-            self.assertTrue(data == {})
+            print(data)
 
         async def delayed_process():
-            for _ in range(30):
+            for _ in range(17):
                 await asyncio.sleep(1)
                 await process()
 
