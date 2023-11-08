@@ -41,7 +41,7 @@ class TestSource(unittest.TestCase):
 
         async def delayed_process():
             for _ in range(17):
-                await asyncio.sleep(1)
+                await asyncio.sleep(3)
                 await process()
 
         self.loop.run_until_complete(delayed_process())

@@ -7,10 +7,28 @@ import time
 
 class TransactionsSource:
 
-    def __init__(self, ws_url, rpc, transaction_filter):
-        self.ws_url = ws_url
-        self.web3 = Web3(Web3.HTTPProvider(rpc))
+    # TransactionsSource class constructor
+    #
+    # Args:
+    #   ws_uri: Websocket URI to connect to for transaction events
+    #   rpc_uri: JSON-RPC URI to query blockchain state
+    #   transaction_filter: Function to filter transactions
+    #
+    #   TODO: For real-time polling, this should be replaced with a system with
+    #    an intensive multi-threaded probabilistic polling. In real-time systems, the transaction call arguments
+    #    should be available immediately from the transaction itself. Therefore, there is no purpose to get this data
+    #    in a separate call.
+    #   indexing_delay: Delay between receiving transaction hash and indexing transaction details
+    #
+    # The constructor initializes the websocket connection, JSON-RPC provider,
+    # transaction filter function, and indexing delay.
+    #
+    # It also initializes empty dicts for transaction data and the background task.
+    def __init__(self, ws_uri, rpc_uri, transaction_filter, indexing_delay=3):
+        self.ws_url = ws_uri
+        self.web3 = Web3(Web3.HTTPProvider(rpc_uri))
         self.filter = transaction_filter
+        self.indexing_delay = indexing_delay
         self.data = {}
         self.task = None
 
@@ -46,6 +64,9 @@ class TransactionsSource:
 
                     if 'params' in response and 'result' in response['params']:
                         tx_hash = response['params']['result']
+
+                        await asyncio.sleep(self.indexing_delay)
+
                         transaction = self.web3.eth.get_transaction(tx_hash)
 
                         if transaction is not None and self.filter(transaction):
