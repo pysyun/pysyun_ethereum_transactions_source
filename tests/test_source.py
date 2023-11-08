@@ -46,6 +46,23 @@ class TestSource(unittest.TestCase):
 
         self.loop.run_until_complete(delayed_process())
 
+    def test_infinite_process(self):
+        source = TransactionsSource(
+            "wss://bsc.publicnode.com",
+            "https://bsc-dataseed.binance.org",
+            each)
+
+        async def process():
+            data = source.process([])
+            print(data)
+
+        async def infinite_process():
+            while True:
+                await asyncio.sleep(3)
+                await process()
+
+        self.loop.run_until_complete(infinite_process())
+
 
 if __name__ == '__main__':
     unittest.main()
