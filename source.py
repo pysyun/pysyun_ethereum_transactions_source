@@ -34,11 +34,17 @@ class TransactionsSource:
 
     def process(self, _):
 
-        # Create a task if not exists
+        # Create an execution loop task on the first run
         if self.task is None:
             self.task = asyncio.create_task(self.__process())
 
-        return self.data
+        result = self.data
+
+        # Optionally, clean data not to cause buffering
+        if not _:
+            self.data = {}
+
+        return result
 
     def stop(self):
         if self.task is not None:
